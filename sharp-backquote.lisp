@@ -1,15 +1,7 @@
 ;;;; Sharp backquote reader macro
-;;; Dec. 27th 2013, chiku
 ;;; The #` reader macro introduced in Let Over the Lambda is an
 ;;; excellent stuff. However, implicit insertion of anaphoras is more
-;;; preferable for me. Let me try to implement that variation.
-;;;  Here is the original one.
-;;; Mar. 10th 2015, chiku
-;;; Try again.
-(defun |#`-reader| (strm c n)
-  (declare (ignore c))
-  `(lambda ,(map0-n (lambda (n) (intern (format nil "A~A" n))) (1- (or n 1)))
-     ,(funcall (get-macro-character #\`) strm nil)))
+;;; preferable.
 
 (defun anaphorap (sym)
   " Retruns T if the name of the given symbol ``SYM'' is
