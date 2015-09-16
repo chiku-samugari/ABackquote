@@ -2,6 +2,7 @@
 ;;; The #` reader macro introduced in Let Over the Lambda is an
 ;;; excellent stuff. However, implicit insertion of anaphoras is more
 ;;; preferable.
+(in-package :sharp-backquote)
 
 (defun anaphorap (sym)
   " Retruns T if the name of the given symbol ``SYM'' is
