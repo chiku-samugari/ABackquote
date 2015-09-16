@@ -19,34 +19,39 @@
 
 ;;; For example, Clozure CL does not need this function. Unquoted
 ;;; expressions are not something special structure.
-(defun unquoted-symbol-p (obj)
+(defun unquotedp (obj)
   #+sbcl
   (if (sb-impl::comma-p obj)
     (let ((expr (sb-impl::comma-expr obj)))
-      (if (symbolp expr)
-        (values t expr)
-        (unquoted-symbol-p expr)))))
+      (values t expr))))
 
-(mapcar #'unquoted-symbol-p (flatten (read-from-string "'(lambda (x) `(print ,a))")))
+(mapcar #'unquotedp (flatten (read-from-string "'(lambda (x) `(print ,a))")))
 
-(mapcar #'unquoted-symbol-p (flatten (read-from-string "'(lambda (x) ``(print ,,a))")))
+(mapcar #'unquotedp (flatten (read-from-string "'(lambda (x) ``(print ,,a))")))
+
+(mapcar #'unquotedp (flatten (read-from-string "(lambda (x) `(print ,(`,a)))")))
 
 (defun anaphora-list (tree)
   " Returns a list that is composed of symbols whose ANAPHORAP check is
    T. Each symbol appears only once in the list and the list is sorted
    by the name.
    "
-  (sort (remove-duplicates
-          (filter (lambda (obj)
-                    (or (and (symbolp obj) (anaphorap obj) obj)
-                        #+sbcl
-                        (multiple-value-bind (result expr)
-                          (unquoted-symbol-p obj)
-                          (and result expr))))
-                  (flatten tree)))
-        #'string<= :key #'symbol-name))
+  (labels ((collect (tree)
+             (filter (lambda (obj)
+                       (or (and (symbolp obj) (anaphorap obj) obj)
+                           #+sbcl
+                           (multiple-value-bind (? expr)
+                             (unquotedp obj)
+                             (and ? (collect expr)))))
+                     (flatten tree))))
+    (sort (remove-duplicates (flatten (collect tree)))
+          #'string<= :key #'symbol-name)))
 
-(defun new-sharpbq-reader (strm c n)
+(anaphora-list (read-from-string "(lambda (x) `(print ,(`,a0)))"))
+
+(anaphora-list (read-from-string "`(print (list ,a0 ,a1 ,a3))"))
+
+(defun |#?-reader| (strm c n)
   (declare (ignore c))
   (let ((expr (funcall (get-macro-character #\`) strm nil)))
     `(lambda ,(if n
@@ -54,8 +59,8 @@
                 (anaphora-list expr))
        ,expr)))
 
-;;; Try it out by register it as #?
-(set-dispatch-macro-character #\# #\? #'sharpbq-reader)
+(set-dispatch-macro-character #\# #\? #'|#?-reader|)
 
 (read-from-string "#?(print (list ,a0 ,a1 ,a3))")
 (read-from-string "#4?(print (list ,a0 a1 a3))")
+(read-from-string "#?(print (list ,a0 ,a1 ,(progn `(foo ,a0) `(bar ,a2))))")
