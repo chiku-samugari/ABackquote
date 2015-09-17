@@ -50,14 +50,15 @@
 
 (anaphora-list (read-from-string "`(print (list ,a0 ,a1 ,a3))"))
 
-(defun |#?-reader| (strm c n)
-  (declare (ignore c))
-  (let ((expr (funcall (get-macro-character #\`) strm nil)))
-    `(lambda ,(if n
-                (loop :for i :from 0 :upto (1- n)
-                      :collect (intern (format nil "A~A" i)))
-                (anaphora-list expr))
-       ,expr)))
+(let ((bqreader-fn (get-macro-character #\` (copy-readtable nil))))
+  (defun |#?-reader| (strm c n)
+    (declare (ignore c))
+    (let ((expr (funcall bqreader-fn strm nil)))
+      `(lambda ,(if n
+                  (loop :for i :from 0 :upto (1- n)
+                        :collect (intern (format nil "A~A" i)))
+                  (anaphora-list expr))
+         ,expr))))
 
 (set-dispatch-macro-character #\# #\? #'|#?-reader|)
 
