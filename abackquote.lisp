@@ -2,10 +2,10 @@
 ;;; The #` reader macro introduced in Let Over the Lambda is an
 ;;; excellent stuff. However, implicit insertion of anaphoras is more
 ;;; preferable.
-(in-package :sharp-backquote)
+(in-package :abackquote)
 
 (let ((bqreader-fn (get-macro-character #\` (copy-readtable nil))))
-  (defun sharp-backquote-reader (strm c n)
+  (defun |#`-reader| (strm c n)
     (declare (ignore c))
     (if n
       `(lambda ,(loop :for i :from 0 :upto (1- n)
@@ -26,7 +26,7 @@
           `(lambda ,(sort anaphoras #'string<= :key #'symbol-name)
              ,expr))))))
 
-(set-dispatch-macro-character #\# #\` #'sharp-backquote-reader)
+(set-dispatch-macro-character #\# #\` #'|#`-reader|)
 
 (read-from-string "#`(print (list ,a0 ,a1 ,a3))")
 (read-from-string "#4`(print (list ,a0 a1 a3))")
