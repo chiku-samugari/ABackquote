@@ -22,8 +22,7 @@
 (defun unquotedp (obj)
   #+sbcl
   (if (sb-impl::comma-p obj)
-    (let ((expr (sb-impl::comma-expr obj)))
-      (values t expr))))
+    (values t (sb-impl::comma-expr obj))))
 
 (mapcar #'unquotedp (flatten (read-from-string "'(lambda (x) `(print ,a))")))
 
