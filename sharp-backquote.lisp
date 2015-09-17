@@ -54,7 +54,8 @@
   (declare (ignore c))
   (let ((expr (funcall (get-macro-character #\`) strm nil)))
     `(lambda ,(if n
-                (map0-n (lambda (n) (intern (format nil "A~A" n))) (1- n))
+                (loop :for i :from 0 :upto (1- n)
+                      :collect (intern (format nil "A~A" i)))
                 (anaphora-list expr))
        ,expr)))
 
@@ -62,4 +63,6 @@
 
 (read-from-string "#?(print (list ,a0 ,a1 ,a3))")
 (read-from-string "#4?(print (list ,a0 a1 a3))")
+(read-from-string "#0?(print (list ,a0 a1 a3))")
+(read-from-string "#?(print (list ,a0 a1 a3))")
 (read-from-string "#?(print (list ,a0 ,a1 ,(progn `(foo ,a0) `(bar ,a2))))")
