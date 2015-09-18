@@ -27,7 +27,11 @@
                 (declare (ignore c))
                 (if (anaphora-suffix-p strm)
                   (car (pushnew (intern-anaphora (read strm t nil t))
-                                anaphoras))))
+                                anaphoras))
+                  (let ((fake (make-concatenated-stream
+                                (make-string-input-stream "\\A")
+                                strm)))
+                    (read fake t nil t))))
           t)
         (let ((expr (funcall bqreader-fn strm nil)))
           `(lambda ,(sort anaphoras #'string<= :key #'symbol-name)
@@ -42,3 +46,5 @@
 (read-from-string "#`(print (list ,a0 ,a1 ,(progn `(foo ,a0) `(bar ,a2))))")
 (read-from-string "#`(print (list ,a0 ,a1 ,(progn #`(foo ,a4) `(bar ,a2))))")
 (read-from-string "#`(print (list ,a0 ,a1 ,(progn #`(foo ,a4) #`(bar ,a2))))")
+(read-from-string "#`(print (list ,abc ,a1 ,a3))")
+(read-from-string "#`(print (list ,a (bc ,a2) ,a1 ,a0))")
