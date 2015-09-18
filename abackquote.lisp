@@ -4,22 +4,29 @@
 ;;; preferable.
 (in-package :abackquote)
 
+(defun anaphora-suffix-p (strm)
+  ;; Here, base must be 10. The definition of anaphora is the basis.
+  ;; Even if *READ-BASE* is not 10.
+  ;; TODO: FIXME!
+  (digit-char-p (peek-char nil strm t nil t)))
+
+(defun intern-anaphora (asuffix)
+  (intern (format nil "A~D" asuffix)))
+
 (let ((bqreader-fn (get-macro-character #\` (copy-readtable nil))))
   (defun |#`-reader| (strm c n)
     (declare (ignore c))
     (if n
       `(lambda ,(loop :for i :from 0 :upto (1- n)
-                      :collect (intern (format nil "A~D" i)))
+                      :collect (intern-anaphora i))
          ,(funcall bqreader-fn strm nil))
       (let ((*readtable* (copy-readtable))
             anaphoras)
         (set-macro-character
           #\a (lambda (strm c)
                 (declare (ignore c))
-                ;; Here, base must be 10. The definition of anaphora is
-                ;; the basis Even if *READ-BASE* is not 10.
-                (if (digit-char-p (peek-char nil strm t nil t))
-                  (car (pushnew (intern (format nil "A~D" (read strm t nil t)))
+                (if (anaphora-suffix-p strm)
+                  (car (pushnew (intern-anaphora (read strm t nil t))
                                 anaphoras))))
           t)
         (let ((expr (funcall bqreader-fn strm nil)))
