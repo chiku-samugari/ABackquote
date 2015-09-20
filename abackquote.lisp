@@ -29,6 +29,33 @@
 (defun intern-anaphora (asuffix)
   (intern (format nil "A~D" asuffix)))
 
+(defmacro with-anaphora-picking (var prefix-chars &body body)
+  `(let ((*readtable* (copy-readtable))
+         ,var)
+     ,@(mapcar (lambda (ch)
+                 `(set-macro-character
+                    ,ch
+                    (lambda (strm c)
+                      (declare (ignore c))
+                      (multiple-value-bind (suffix anaphora?)
+                        (read-suffix strm)
+                        (if anaphora?
+                          (car (pushnew (intern-anaphora suffix) ,var))
+                          (read (make-concatenated-stream
+                                  (make-string-input-stream
+                                    (concat-str ,(concat-str "\\" (string-upcase (string ch))) suffix))
+                                  strm)
+                                t nil t))))
+                    t))
+               prefix-chars)
+     ,@body))
+
+(with-anaphora-picking anaphoras (#\A #\a)
+  (let ((expr (funcall bqreader-fn strm nil)))
+    `(lambda ,(sort anaphoras #'<=
+                    :key (lambda (a) (parse-integer (subseq (symbol-name a) 1))))
+       ,expr)))
+
 (let ((bqreader-fn (get-macro-character #\` (copy-readtable nil))))
   (defun |#`-reader| (strm c n)
     (declare (ignore c))
@@ -36,20 +63,7 @@
       `(lambda ,(loop :for i :from 0 :upto (1- n)
                       :collect (intern-anaphora i))
          ,(funcall bqreader-fn strm nil))
-      (let ((*readtable* (copy-readtable))
-            anaphoras)
-        (set-macro-character
-          #\a (lambda (strm c)
-                (declare (ignore c))
-                (multiple-value-bind (suffix anaphora?)
-                  (read-suffix strm)
-                  (if anaphora?
-                    (car (pushnew (intern-anaphora suffix) anaphoras))
-                    (let ((fake (make-concatenated-stream
-                                  (make-string-input-stream (concat-str "\\A" suffix))
-                                  strm)))
-                      (read fake t nil t)))))
-          t)
+      (with-anaphora-picking anaphoras (#\a #\A)
         (let ((expr (funcall bqreader-fn strm nil)))
           `(lambda ,(sort anaphoras #'<=
                           :key (lambda (a) (parse-integer (subseq (symbol-name a) 1))))
@@ -70,6 +84,8 @@
 (read-from-string "#`(print (list ,a2bc ,a1 ,a3))")
 
 (read-from-string "#`(list ,a0)")
+(read-from-string "#`(list ,A0)")
 (read-from-string "#`(list ,a1 ,a0)")
 (read-from-string "#`(list ,a\\1 ,a0)")
+(read-from-string "#`(list ,A\\1 ,a0)")
 (read-from-string "#`(list ,a1\\1 ,a0)")
