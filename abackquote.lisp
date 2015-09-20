@@ -51,7 +51,8 @@
                       (read fake t nil t)))))
           t)
         (let ((expr (funcall bqreader-fn strm nil)))
-          `(lambda ,(sort anaphoras #'string<= :key #'symbol-name)
+          `(lambda ,(sort anaphoras #'<=
+                          :key (lambda (a) (parse-integer (subseq (symbol-name a) 1))))
              ,expr))))))
 
 (set-dispatch-macro-character #\# #\` #'|#`-reader|)
