@@ -43,8 +43,8 @@
    variable VAR. The forms given as BODY will be evaluated on READ time
    under the environment.
    "
-  `(let* ((*saved-readtable* (or *saved-readtable* *readtable*))
-          (*readtable* (copy-readtable))
+  `(let ((*saved-readtable* (or *saved-readtable* *readtable*))
+         (*readtable* (copy-readtable))
          ,var)
      ,@(mapcar (lambda (ch)
                  `(set-macro-character
