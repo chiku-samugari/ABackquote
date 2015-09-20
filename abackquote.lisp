@@ -37,6 +37,12 @@
 (defparameter *saved-readtable* nil)
 
 (defmacro with-anaphora-picking (var prefix-chars &body body)
+  "This macro binds *READTABLE* to a copy of current readtable and set
+   the anaphora picking function to all the characters given as the
+   PREFIX-CHARS. The picked anaphoras are collected to the specified
+   variable VAR. The forms given as BODY will be evaluated on READ time
+   under the environment.
+   "
   `(let* ((*saved-readtable* (or *saved-readtable* *readtable*))
           (*readtable* (copy-readtable))
          ,var)
@@ -55,12 +61,6 @@
                     t))
                prefix-chars)
      ,@body))
-
-(with-anaphora-picking anaphoras (#\A #\a)
-  (let ((expr (funcall bqreader-fn strm nil)))
-    `(lambda ,(sort anaphoras #'<=
-                    :key (lambda (a) (parse-integer (subseq (symbol-name a) 1))))
-       ,expr)))
 
 (let ((bqreader-fn (get-macro-character #\` (copy-readtable nil))))
   (defun |#`-reader| (strm c n)
