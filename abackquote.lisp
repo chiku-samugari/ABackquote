@@ -29,8 +29,16 @@
 (defun intern-anaphora (asuffix)
   (intern (format nil "A~D" asuffix)))
 
+(defun unread-str (str strm)
+  (make-concatenated-stream
+    (make-string-input-stream str)
+    strm))
+
+(defparameter *saved-readtable* nil)
+
 (defmacro with-anaphora-picking (var prefix-chars &body body)
-  `(let ((*readtable* (copy-readtable))
+  `(let* ((*saved-readtable* (or *saved-readtable* *readtable*))
+          (*readtable* (copy-readtable))
          ,var)
      ,@(mapcar (lambda (ch)
                  `(set-macro-character
@@ -41,11 +49,9 @@
                         (read-suffix strm)
                         (if anaphora?
                           (car (pushnew (intern-anaphora suffix) ,var))
-                          (read (make-concatenated-stream
-                                  (make-string-input-stream
-                                    (concat-str ,(concat-str "\\" (string-upcase (string ch))) suffix))
-                                  strm)
-                                t nil t))))
+                          (let ((*readtable* *saved-readtable*))
+                            (read (unread-str (concat-str ,ch suffix) strm)
+                                  t nil t)))))
                     t))
                prefix-chars)
      ,@body))
@@ -82,6 +88,8 @@
 (let ((*read-base* 4))
   (read-from-string "#`(print (list ,a10 (bc ,a2) ,a1 ,a0 a4))"))
 (read-from-string "#`(print (list ,a2bc ,a1 ,a3))")
+(read-from-string "#`(print (list ,a\\2\\bc ,a1 ,a3))")
+(read-from-string "#`(print (list ,a\\2bc ,a1 ,a3))")
 
 (read-from-string "#`(list ,a0)")
 (read-from-string "#`(list ,A0)")
