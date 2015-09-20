@@ -7,14 +7,14 @@
 (defun terminating-character-p (ch)
   (or (in ch #\Tab #\Newline #\Linefeed #\Page #\Return #\Space)
       ;;; Actually speaking, TERMINATING-MACRO-CHARACTER-P is desirable
-      ;;; here.  But it is conceptually impossible in Common Lisp
-      ;;; because Common Lisp does not offer any way to check if a macro
+      ;;; here. But it is conceptually impossible in Common Lisp because
+      ;;; Common Lisp does not offer any way to check if a macro
       ;;; character is terminating or non-terminating.
       (get-macro-character ch)))
 
 (defun read-suffix (strm)
-  ;; Here, base must be 10. The definition of anaphora is the basis.
-  ;; Even if *READ-BASE* is not 10.
+  ;; Here, the radix must be 10. The definition of anaphora is the
+  ;; basis. Even if *READ-BASE* is not 10.
   (do (clst
         (ch (peek-char nil strm t nil t) (peek-char nil strm t nil t)))
     ((not (digit-char-p ch))
