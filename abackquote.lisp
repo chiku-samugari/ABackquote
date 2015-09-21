@@ -56,7 +56,7 @@
                         (if anaphora?
                           (car (pushnew (intern-anaphora suffix) ,var))
                           (let ((*readtable* *saved-readtable*))
-                            (read (unread-str (concat-str ,ch suffix) strm)
+                            (read (unread-str (concat-str (string ,ch) suffix) strm)
                                   t nil t)))))
                     t))
                prefix-chars)
