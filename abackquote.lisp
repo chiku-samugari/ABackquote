@@ -12,55 +12,82 @@
       ;;; character is terminating or non-terminating.
       (get-macro-character ch)))
 
+;;; TODO: Colon should be properly handled.
+;;; TODO: Padding 0 must be rejected.
 (defun read-suffix (strm)
   ;; Here, the radix must be 10. The definition of anaphora is the
   ;; basis. Even if *READ-BASE* is not 10.
-  (do (clst
-        (ch (peek-char nil strm t nil t) (peek-char nil strm t nil t)))
+  (do* (clst
+         (banged? (char= (peek-char nil strm t nil t) #\!))
+         (ch (if banged?
+               (read-char strm t nil t)
+               (peek-char nil strm t nil t))
+             (peek-char nil strm t nil t)))
     ((not (digit-char-p ch))
      ;; TODO: what about a1\\1? Should it be an anaphora?
      (cond ((terminating-character-p ch)
-             (if clst
-               (values (coerce (nreverse clst) 'string) t)
-               (values "" nil)))
-           (t (values (coerce (nreverse clst) 'string) nil))))
+            (if clst
+              (values (coerce (nreverse clst) 'string) t banged?)
+              (values "" nil banged?)))
+           (t (values (coerce (nreverse clst) 'string) nil banged?))))
     (push (read-char strm nil t nil) clst)))
 
 (defun intern-anaphora (asuffix)
   (intern (format nil "A~D" asuffix)))
 
-(defun unread-str (str strm)
+(defun unread-str (strm &rest strdesg-lst)
   (make-concatenated-stream
-    (make-string-input-stream str)
+    (make-string-input-stream
+      (reduce (lambda (part item)
+                (concat-str part (string item)))
+              strdesg-lst :initial-value ""))
     strm))
 
 (defparameter *saved-readtable* nil)
 
-(defmacro with-anaphora-picking (var prefix-chars &body body)
+;;; On WITH-ANAPHORA-PICKING expansion : SYMBOL-MACROLET form is build.
+;;; Since the body of eacy symbol macro is never evaluated, we have to
+;;; use this approach to program the expansion result of symbol macros.
+;;; At this expansion, inner backquoted LET form is not expanded. That
+;;; form is expanded on next expansion, expansion of symbol macros.
+(defmacro with-anaphora-picking (local-var shared-var prefix-chars &body body)
   "This macro binds *READTABLE* to a copy of current readtable and set
    the anaphora picking function to all the characters given as the
    PREFIX-CHARS. The picked anaphoras are collected to the specified
    variable VAR. The forms given as BODY will be evaluated on READ time
    under the environment.
    "
-  `(let ((*saved-readtable* (or *saved-readtable* *readtable*))
-         (*readtable* (copy-readtable))
-         ,var)
-     ,@(mapcar (lambda (ch)
-                 `(set-macro-character
-                    ,ch
-                    (lambda (strm c)
-                      (declare (ignore c))
-                      (multiple-value-bind (suffix anaphora?)
-                        (read-suffix strm)
-                        (if anaphora?
-                          (car (pushnew (intern-anaphora suffix) ,var))
-                          (let ((*readtable* *saved-readtable*))
-                            (read (unread-str (concat-str (string ,ch) suffix) strm)
-                                  t nil t)))))
-                    t))
-               prefix-chars)
-     ,@body))
+  `(symbol-macrolet
+     ((setup-reader-macros
+        (progn ,@(mapcar (lambda (ch)
+                           `(set-macro-character
+                              ,ch
+                              (lambda (strm c)
+                                (declare (ignore c))
+                                (multiple-value-bind (suffix anaphora? banged?)
+                                  (read-suffix strm)
+                                  (cond ((and anaphora? banged?)
+                                         (car (pushnew (intern-anaphora suffix) ,shared-var)))
+                                        (anaphora?
+                                          (car (pushnew (intern-anaphora suffix) ,local-var)))
+                                        (t (let ((*readtable* *saved-readtable*))
+                                             (read (unread-str strm ,ch (if banged?  "!" "") suffix)
+                                                   t nil t))))))
+                              t))
+                         prefix-chars))))
+     (if (null *saved-readtable*)
+       (let ((*saved-readtable* *readtable*)
+             (*readtable* (copy-readtable))
+             ,shared-var
+             ,local-var)
+         (declare (special ,shared-var))
+         setup-reader-macros
+         ,@body)
+       (let ((*readtable* (copy-readtable))
+             ,local-var)
+         (declare (special ,shared-var))
+         setup-reader-macros
+         ,@body))))
 
 (let ((bqreader-fn (get-macro-character #\` (copy-readtable nil))))
   (defun |#`-reader| (strm c n)
@@ -69,10 +96,10 @@
       `(lambda ,(loop :for i :from 0 :upto (1- n)
                       :collect (intern-anaphora i))
          ,(funcall bqreader-fn strm nil))
-      (with-anaphora-picking anaphoras (#\a #\A)
+      (with-anaphora-picking anaphoras shared-anaphoras (#\a #\A)
         (let ((expr (funcall bqreader-fn strm nil)))
-          `(lambda ,(sort anaphoras #'<=
-                          :key (lambda (a) (parse-integer (subseq (symbol-name a) 1))))
+          `(lambda ,(sort (union anaphoras shared-anaphoras) #'<=
+                          :key (lambda (a) (parse-integer (remove-if-not #'digit-char-p (symbol-name a)))))
              ,expr))))))
 
 (set-dispatch-macro-character #\# #\` #'|#`-reader|)
@@ -83,7 +110,7 @@
 (read-from-string "#`(print (list ,a0 a1 a3))")
 (read-from-string "#`(print (list ,a0 ,a1 ,(progn `(foo ,a0) `(bar ,a2))))")
 (read-from-string "#`(print (list ,a0 ,a1 ,(progn #`(foo ,a4) `(bar ,a2))))")
-(read-from-string "#`(print (list ,a0 ,a1 ,(progn #`(foo ,a4) #`(bar ,a2))))")
+(read-from-string "#`(print (list ,a0 ,a1 ,(progn #`(foo ,a!4) #`(bar ,a2))))")
 (read-from-string "#`(print (list ,abc ,a1 ,a3))")
 (let ((*read-base* 4))
   (read-from-string "#`(print (list ,a10 (bc ,a2) ,a1 ,a0 a4))"))
@@ -97,3 +124,8 @@
 (read-from-string "#`(list ,a\\1 ,a0)")
 (read-from-string "#`(list ,A\\1 ,a0)")
 (read-from-string "#`(list ,a1\\1 ,a0)")
+
+(read-from-string "#`(print (list ,a0 ,a1 ,(progn #`(foo ,a!4 #`(baz a!1)) #`(bar ,a2))))")
+
+(read-from-string "#`(list ,a0 a!d)")
+(read-from-string "#`(list ,a01)")
