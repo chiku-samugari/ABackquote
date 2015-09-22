@@ -119,7 +119,8 @@
                           :key #'anaphora-order)
              ,expr))))))
 
-(set-dispatch-macro-character #\# #\` #'|#`-reader|)
+(defun enable-abackquote (&optional (disp-char #\#) (sub-char #\`))
+  (set-dispatch-macro-character disp-char sub-char #'|#`-reader|))
 
 (read-from-string "#`(print (list ,a0 ,a1 ,a3))")
 (read-from-string "#`(print (list ,a0 ,a0 ,a3))")
