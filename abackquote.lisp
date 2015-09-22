@@ -16,19 +16,20 @@
 (defun read-suffix (strm)
   ;; Here, the radix must be 10. The definition of anaphora is the
   ;; basis. Even if *READ-BASE* is not 10.
-  (do* (clst
-         (banged? (if (char= (peek-char nil strm t nil t) #\!)
-                    (read-char strm t nil t)))
-         (ch (peek-char nil strm t nil t) (peek-char nil strm t nil t)))
-    ((not (digit-char-p ch))
-     ;; TODO: what about a1\\1? Should it be an anaphora?
-     (values (coerce (reverse clst) 'string)
-             (and (terminating-character-p ch)
-                  clst
-                  (or (equal clst '(#\0))
-                      (char/= (last1 clst) #\0)))
-             banged?))
-    (push (read-char strm nil t nil) clst)))
+  (let (bangs)
+    (awhile (char= (peek-char nil strm t nil t) #\!)
+      (push (read-char strm t nil t) bangs))
+    (do (clst
+          (ch (peek-char nil strm t nil t) (peek-char nil strm t nil t)))
+      ((not (digit-char-p ch))
+       ;; TODO: what about a1\\1? Should it be an anaphora?
+       (values (coerce (reverse clst) 'string)
+               (and (terminating-character-p ch)
+                    clst
+                    (or (equal clst '(#\0))
+                        (char/= (last1 clst) #\0)))
+               (length bangs)))
+      (push (read-char strm nil t nil) clst))))
 
 (defun intern-anaphora (asuffix)
   (intern (format nil "A~D" asuffix)))
@@ -43,22 +44,31 @@
 
 (defparameter *saved-readtable* nil)
 
+(defmacro letitbe (expr &body body)
+  `(let ((it ,expr))
+     ,@body
+     it))
 
 (eval-when (:compile-toplevel :load-toplevel :execute)
   (defun gen-reader-macro-setup-code (ch local-var shared-var)
-    (with-gensyms (strm c suffix anaphora? banged?)
+    (with-gensyms (strm c suffix anaphora? bangcount)
       `(set-macro-character
          ,ch
          (lambda (,strm ,c)
            (declare (ignore ,c))
-           (multiple-value-bind (,suffix ,anaphora? ,banged?)
+           (multiple-value-bind (,suffix ,anaphora? ,bangcount)
              (read-suffix ,strm)
-             (cond ((and ,anaphora? ,banged?)
-                    (car (pushnew (intern-anaphora ,suffix) ,shared-var)))
+             (cond ((and ,anaphora? (< 0 ,bangcount))
+                    (letitbe (intern-anaphora ,suffix)
+                      (pushnew it (nth ,bangcount ,shared-var))))
                    (,anaphora?
-                     (car (pushnew (intern-anaphora ,suffix) ,local-var)))
+                     (letitbe (intern-anaphora ,suffix)
+                       (pushnew (intern-anaphora ,suffix) ,local-var)))
                    (t (let ((*readtable* *saved-readtable*))
-                        (read (unread-str ,strm ,ch (if ,banged?  "!" "") ,suffix)
+                        (read (unread-str
+                                ,strm ,ch
+                                (make-string ,bangcount :initial-element #\!)
+                                ,suffix)
                               t nil t))))))
          t))))
 
@@ -82,18 +92,20 @@
      (if (null *saved-readtable*)
        (let ((*saved-readtable* *readtable*)
              (*readtable* (copy-readtable))
-             nest
-             ,shared-var
+             (,shared-var (list nil))
              ,local-var)
          (declare (special ,shared-var))
          setup-reader-macros
          ,@body)
        (let ((*readtable* (copy-readtable))
-             (nest t)
              ,local-var)
          (declare (special ,shared-var))
+         (push () ,shared-var)
          setup-reader-macros
-         ,@body))))
+         (unwind-protect
+           (progn
+             ,@body)
+           (pop ,shared-var))))))
 
 (defun anaphora-order (anaphora)
   (parse-integer (remove-if-not #'digit-char-p (symbol-name anaphora))))
@@ -107,17 +119,19 @@
          ,(funcall bqreader-fn strm nil))
       (with-anaphora-picking anaphoras shared-anaphoras (#\a #\A)
         (let ((expr (funcall bqreader-fn strm nil)))
-          `(lambda ,(sort (union anaphoras (unless nest shared-anaphoras)) #'<=
+          `(lambda ,(sort (union anaphoras (car shared-anaphoras)) #'<=
                           :key #'anaphora-order)
              ,expr))))))
 
 (set-dispatch-macro-character #\# #\` #'|#`-reader|)
 
 (read-from-string "#`(print (list ,a0 ,a1 ,a3))")
+(read-from-string "#`(print (list ,a0 ,a0 ,a3))")
 (read-from-string "#4`(print (list ,a0 a1 a3))")
 (read-from-string "#0`(print (list ,a0 a1 a3))")
 (read-from-string "#`(print (list ,a0 a1 a3))")
 (read-from-string "#`(print (list ,a0 ,a1 ,(progn `(foo ,a0) `(bar ,a2))))")
+(read-from-string "#`(print (list ,a0 ,a1 ,(progn `(foo ,a0) `(bar ,a1))))")
 (read-from-string "#`(print (list ,a0 ,a1 ,(progn #`(foo ,a4) `(bar ,a2))))")
 (read-from-string "#`(print (list ,a0 ,a1 ,(progn #`(foo ,a!4) #`(bar ,a2))))")
 (read-from-string "#`(print (list ,abc ,a1 ,a3))")
@@ -135,6 +149,8 @@
 (read-from-string "#`(list ,a1\\1 ,a0)")
 
 (read-from-string "#`(print (list ,a0 ,a1 ,(progn #`(foo ,a!4 #`(baz a!1)) #`(bar ,a2))))")
+(read-from-string "#`(print (list ,a0 ,a1 ,(progn #`(foo ,a!4 #`(baz a!!1)) #`(bar ,a2))))")
+(read-from-string "#`(print (list ,a0 ,a1 ,(progn #`(foo ,a!4 #`(baz a!!5)) #`(bar ,a2))))")
 
 (read-from-string "#`(list ,a0 a!d)")
 (read-from-string "#`(list ,a01 a!02)")
