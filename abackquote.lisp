@@ -93,6 +93,9 @@
          setup-reader-macros
          ,@body))))
 
+(defun anaphora-order (anaphora)
+  (parse-integer (remove-if-not #'digit-char-p (symbol-name anaphora))))
+
 (let ((bqreader-fn (get-macro-character #\` (copy-readtable nil))))
   (defun |#`-reader| (strm c n)
     (declare (ignore c))
@@ -103,7 +106,7 @@
       (with-anaphora-picking anaphoras shared-anaphoras (#\a #\A)
         (let ((expr (funcall bqreader-fn strm nil)))
           `(lambda ,(sort (union anaphoras (unless nest shared-anaphoras)) #'<=
-                          :key (lambda (a) (parse-integer (remove-if-not #'digit-char-p (symbol-name a)))))
+                          :key #'anaphora-order)
              ,expr))))))
 
 (set-dispatch-macro-character #\# #\` #'|#`-reader|)
