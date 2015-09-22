@@ -13,7 +13,6 @@
       (get-macro-character ch)))
 
 ;;; TODO: Colon should be properly handled.
-;;; TODO: Padding 0 must be rejected.
 (defun read-suffix (strm)
   ;; Here, the radix must be 10. The definition of anaphora is the
   ;; basis. Even if *READ-BASE* is not 10.
@@ -23,11 +22,12 @@
          (ch (peek-char nil strm t nil t) (peek-char nil strm t nil t)))
     ((not (digit-char-p ch))
      ;; TODO: what about a1\\1? Should it be an anaphora?
-     (cond ((terminating-character-p ch)
-            (if clst
-              (values (coerce (nreverse clst) 'string) t banged?)
-              (values "" nil banged?)))
-           (t (values (coerce (nreverse clst) 'string) nil banged?))))
+     (values (coerce (reverse clst) 'string)
+             (and (terminating-character-p ch)
+                  clst
+                  (or (equal clst '(#\0))
+                      (char/= (last1 clst) #\0)))
+             banged?))
     (push (read-char strm nil t nil) clst)))
 
 (defun intern-anaphora (asuffix)
@@ -135,4 +135,4 @@
 (read-from-string "#`(print (list ,a0 ,a1 ,(progn #`(foo ,a!4 #`(baz a!1)) #`(bar ,a2))))")
 
 (read-from-string "#`(list ,a0 a!d)")
-(read-from-string "#`(list ,a01)")
+(read-from-string "#`(list ,a01 a!02)")
