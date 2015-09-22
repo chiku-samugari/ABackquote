@@ -43,22 +43,24 @@
 
 (defparameter *saved-readtable* nil)
 
-(defun gen-reader-macro-setup-code (ch local-var shared-var)
-  (with-gensyms (strm c suffix anaphora? banged?)
-    `(set-macro-character
-       ,ch
-       (lambda (,strm ,c)
-         (declare (ignore ,c))
-         (multiple-value-bind (,suffix ,anaphora? ,banged?)
-           (read-suffix ,strm)
-           (cond ((and ,anaphora? ,banged?)
-                  (car (pushnew (intern-anaphora ,suffix) ,shared-var)))
-                 (,anaphora?
-                   (car (pushnew (intern-anaphora ,suffix) ,local-var)))
-                 (t (let ((*readtable* *saved-readtable*))
-                      (read (unread-str ,strm ,ch (if ,banged?  "!" "") ,suffix)
-                            t nil t))))))
-       t)))
+
+(eval-when (:compile-toplevel :load-toplevel :execute)
+  (defun gen-reader-macro-setup-code (ch local-var shared-var)
+    (with-gensyms (strm c suffix anaphora? banged?)
+      `(set-macro-character
+         ,ch
+         (lambda (,strm ,c)
+           (declare (ignore ,c))
+           (multiple-value-bind (,suffix ,anaphora? ,banged?)
+             (read-suffix ,strm)
+             (cond ((and ,anaphora? ,banged?)
+                    (car (pushnew (intern-anaphora ,suffix) ,shared-var)))
+                   (,anaphora?
+                     (car (pushnew (intern-anaphora ,suffix) ,local-var)))
+                   (t (let ((*readtable* *saved-readtable*))
+                        (read (unread-str ,strm ,ch (if ,banged?  "!" "") ,suffix)
+                              t nil t))))))
+         t))))
 
 ;;; On WITH-ANAPHORA-PICKING expansion : SYMBOL-MACROLET form is build.
 ;;; Since the body of each symbol macro is never evaluated, we have to
