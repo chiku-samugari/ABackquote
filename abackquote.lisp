@@ -46,10 +46,10 @@
 (defparameter *saved-readtable* nil)
 
 ;;; On WITH-ANAPHORA-PICKING expansion : SYMBOL-MACROLET form is build.
-;;; Since the body of eacy symbol macro is never evaluated, we have to
+;;; Since the body of each symbol macro is never evaluated, we have to
 ;;; use this approach to program the expansion result of symbol macros.
-;;; At this expansion, inner backquoted LET form is not expanded. That
-;;; form is expanded on next expansion, expansion of symbol macros.
+;;; At this expansion, LET form is not expanded. That form is expanded
+;;; on next expansion, expansion of symbol macros.
 (defmacro with-anaphora-picking (local-var shared-var prefix-chars &body body)
   "This macro binds *READTABLE* to a copy of current readtable and set
    the anaphora picking function to all the characters given as the
