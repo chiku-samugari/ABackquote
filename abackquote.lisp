@@ -43,6 +43,9 @@
 
 (defparameter *saved-readtable* nil)
 
+(defmacro letitbe (expr &body body)
+  `(let ((it ,expr))
+     ,@body))
 
 (eval-when (:compile-toplevel :load-toplevel :execute)
   (defun gen-reader-macro-setup-code (ch local-var shared-var)
@@ -54,9 +57,11 @@
            (multiple-value-bind (,suffix ,anaphora? ,banged?)
              (read-suffix ,strm)
              (cond ((and ,anaphora? ,banged?)
-                    (car (pushnew (intern-anaphora ,suffix) ,shared-var)))
+                    (letitbe (intern-anaphora ,suffix)
+                      (pushnew it ,shared-var)))
                    (,anaphora?
-                     (car (pushnew (intern-anaphora ,suffix) ,local-var)))
+                     (letitbe (intern-anaphora ,suffix)
+                       (pushnew it ,local-var)))
                    (t (let ((*readtable* *saved-readtable*))
                         (read (unread-str ,strm ,ch (if ,banged?  "!" "") ,suffix)
                               t nil t))))))
