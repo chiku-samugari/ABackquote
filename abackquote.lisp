@@ -55,10 +55,10 @@
            (multiple-value-bind (,suffix ,anaphora? ,bangcount)
              (read-suffix ,strm)
              (cond ((and ,anaphora? (< 0 ,bangcount))
-                    (letitbe (intern-anaphora ,suffix)
+                    (let-it-be (intern-anaphora ,suffix)
                       (pushnew it (nth ,bangcount ,shared-var))))
                    (,anaphora?
-                     (letitbe (intern-anaphora ,suffix)
+                     (let-it-be (intern-anaphora ,suffix)
                        (pushnew (intern-anaphora ,suffix) ,local-var)))
                    (t (let ((*readtable* *saved-readtable*))
                         (read (unread-str

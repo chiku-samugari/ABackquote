@@ -1,6 +1,6 @@
 (in-package :abackquote)
 
-(defmacro letitbe (expr &body body)
+(defmacro let-it-be (expr &body body)
   `(let ((it ,expr))
      ,@body
      it))
