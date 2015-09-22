@@ -17,12 +17,10 @@
 (defun read-suffix (strm)
   ;; Here, the radix must be 10. The definition of anaphora is the
   ;; basis. Even if *READ-BASE* is not 10.
-  (do* (clst
-         (banged? (char= (peek-char nil strm t nil t) #\!))
-         (ch (if banged?
-               (read-char strm t nil t)
-               (peek-char nil strm t nil t))
-             (peek-char nil strm t nil t)))
+  (do (clst
+        (banged? (if (char= (peek-char nil strm t nil t) #\!)
+                   (read-char strm t nil t)))
+        (ch (peek-char nil strm t nil t) (peek-char nil strm t nil t)))
     ((not (digit-char-p ch))
      ;; TODO: what about a1\\1? Should it be an anaphora?
      (cond ((terminating-character-p ch)
