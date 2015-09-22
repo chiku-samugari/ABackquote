@@ -45,6 +45,23 @@
 
 (defparameter *saved-readtable* nil)
 
+(defun gen-reader-macro-setup-code (ch local-var shared-var)
+  (with-gensyms (strm c suffix anaphora? banged?)
+    `(set-macro-character
+       ,ch
+       (lambda (,strm ,c)
+         (declare (ignore ,c))
+         (multiple-value-bind (,suffix ,anaphora? ,banged?)
+           (read-suffix ,strm)
+           (cond ((and ,anaphora? ,banged?)
+                  (car (pushnew (intern-anaphora ,suffix) ,shared-var)))
+                 (,anaphora?
+                   (car (pushnew (intern-anaphora ,suffix) ,local-var)))
+                 (t (let ((*readtable* *saved-readtable*))
+                      (read (unread-str ,strm ,ch (if ,banged?  "!" "") ,suffix)
+                            t nil t))))))
+       t)))
+
 ;;; On WITH-ANAPHORA-PICKING expansion : SYMBOL-MACROLET form is build.
 ;;; Since the body of each symbol macro is never evaluated, we have to
 ;;; use this approach to program the expansion result of symbol macros.
@@ -57,38 +74,24 @@
    variable VAR. The forms given as BODY will be evaluated on READ time
    under the environment.
    "
-  (with-gensyms (strm c suffix anaphora? banged?)
-    `(symbol-macrolet
-       ((setup-reader-macros
-          (progn ,@(mapcar (lambda (ch)
-                             `(set-macro-character
-                                ,ch
-                                (lambda (,strm ,c)
-                                  (declare (ignore ,c))
-                                  (multiple-value-bind (,suffix ,anaphora? ,banged?)
-                                    (read-suffix ,strm)
-                                    (cond ((and ,anaphora? ,banged?)
-                                           (car (pushnew (intern-anaphora ,suffix) ,shared-var)))
-                                          (,anaphora?
-                                            (car (pushnew (intern-anaphora ,suffix) ,local-var)))
-                                          (t (let ((*readtable* *saved-readtable*))
-                                               (read (unread-str ,strm ,ch (if ,banged?  "!" "") ,suffix)
-                                                     t nil t))))))
-                                t))
-                           prefix-chars))))
-       (if (null *saved-readtable*)
-         (let ((*saved-readtable* *readtable*)
-               (*readtable* (copy-readtable))
-               ,shared-var
-               ,local-var)
-           (declare (special ,shared-var))
-           setup-reader-macros
-           ,@body)
-         (let ((*readtable* (copy-readtable))
-               ,local-var)
-           (declare (special ,shared-var))
-           setup-reader-macros
-           ,@body)))))
+  `(symbol-macrolet
+     ((setup-reader-macros
+        (progn ,@(mapcar (lambda (ch)
+                           (gen-reader-macro-setup-code ch local-var shared-var))
+                         prefix-chars))))
+     (if (null *saved-readtable*)
+       (let ((*saved-readtable* *readtable*)
+             (*readtable* (copy-readtable))
+             ,shared-var
+             ,local-var)
+         (declare (special ,shared-var))
+         setup-reader-macros
+         ,@body)
+       (let ((*readtable* (copy-readtable))
+             ,local-var)
+         (declare (special ,shared-var))
+         setup-reader-macros
+         ,@body))))
 
 (let ((bqreader-fn (get-macro-character #\` (copy-readtable nil))))
   (defun |#`-reader| (strm c n)
