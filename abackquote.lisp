@@ -57,37 +57,38 @@
    variable VAR. The forms given as BODY will be evaluated on READ time
    under the environment.
    "
-  `(symbol-macrolet
-     ((setup-reader-macros
-        (progn ,@(mapcar (lambda (ch)
-                           `(set-macro-character
-                              ,ch
-                              (lambda (strm c)
-                                (declare (ignore c))
-                                (multiple-value-bind (suffix anaphora? banged?)
-                                  (read-suffix strm)
-                                  (cond ((and anaphora? banged?)
-                                         (car (pushnew (intern-anaphora suffix) ,shared-var)))
-                                        (anaphora?
-                                          (car (pushnew (intern-anaphora suffix) ,local-var)))
-                                        (t (let ((*readtable* *saved-readtable*))
-                                             (read (unread-str strm ,ch (if banged?  "!" "") suffix)
-                                                   t nil t))))))
-                              t))
-                         prefix-chars))))
-     (if (null *saved-readtable*)
-       (let ((*saved-readtable* *readtable*)
-             (*readtable* (copy-readtable))
-             ,shared-var
-             ,local-var)
-         (declare (special ,shared-var))
-         setup-reader-macros
-         ,@body)
-       (let ((*readtable* (copy-readtable))
-             ,local-var)
-         (declare (special ,shared-var))
-         setup-reader-macros
-         ,@body))))
+  (with-gensyms (strm c suffix anaphora? banged?)
+    `(symbol-macrolet
+       ((setup-reader-macros
+          (progn ,@(mapcar (lambda (ch)
+                             `(set-macro-character
+                                ,ch
+                                (lambda (,strm ,c)
+                                  (declare (ignore ,c))
+                                  (multiple-value-bind (,suffix ,anaphora? ,banged?)
+                                    (read-suffix ,strm)
+                                    (cond ((and ,anaphora? ,banged?)
+                                           (car (pushnew (intern-anaphora ,suffix) ,shared-var)))
+                                          (,anaphora?
+                                            (car (pushnew (intern-anaphora ,suffix) ,local-var)))
+                                          (t (let ((*readtable* *saved-readtable*))
+                                               (read (unread-str ,strm ,ch (if ,banged?  "!" "") ,suffix)
+                                                     t nil t))))))
+                                t))
+                           prefix-chars))))
+       (if (null *saved-readtable*)
+         (let ((*saved-readtable* *readtable*)
+               (*readtable* (copy-readtable))
+               ,shared-var
+               ,local-var)
+           (declare (special ,shared-var))
+           setup-reader-macros
+           ,@body)
+         (let ((*readtable* (copy-readtable))
+               ,local-var)
+           (declare (special ,shared-var))
+           setup-reader-macros
+           ,@body)))))
 
 (let ((bqreader-fn (get-macro-character #\` (copy-readtable nil))))
   (defun |#`-reader| (strm c n)
