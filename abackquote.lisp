@@ -44,10 +44,6 @@
 
 (defparameter *saved-readtable* nil)
 
-(defmacro letitbe (expr &body body)
-  `(let ((it ,expr))
-     ,@body
-     it))
 
 (eval-when (:compile-toplevel :load-toplevel :execute)
   (defun gen-reader-macro-setup-code (ch local-var shared-var)

@@ -18,4 +18,5 @@
   :long-description "Extended version of Sharp-Backquote introduced in ``Let Over the Lambda''"
   :serial t
   :components ((:file "packages")
+               (:file "util")
                (:file "abackquote")))
