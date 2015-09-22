@@ -80,12 +80,14 @@
      (if (null *saved-readtable*)
        (let ((*saved-readtable* *readtable*)
              (*readtable* (copy-readtable))
+             nest
              ,shared-var
              ,local-var)
          (declare (special ,shared-var))
          setup-reader-macros
          ,@body)
        (let ((*readtable* (copy-readtable))
+             (nest t)
              ,local-var)
          (declare (special ,shared-var))
          setup-reader-macros
@@ -100,7 +102,7 @@
          ,(funcall bqreader-fn strm nil))
       (with-anaphora-picking anaphoras shared-anaphoras (#\a #\A)
         (let ((expr (funcall bqreader-fn strm nil)))
-          `(lambda ,(sort (union anaphoras shared-anaphoras) #'<=
+          `(lambda ,(sort (union anaphoras (unless nest shared-anaphoras)) #'<=
                           :key (lambda (a) (parse-integer (remove-if-not #'digit-char-p (symbol-name a)))))
              ,expr))))))
 
