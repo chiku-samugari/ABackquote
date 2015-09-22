@@ -44,7 +44,6 @@
 
 (defparameter *saved-readtable* nil)
 
-
 (eval-when (:compile-toplevel :load-toplevel :execute)
   (defun gen-reader-macro-setup-code (ch local-var shared-var)
     (with-gensyms (strm c suffix anaphora? bangcount)
@@ -122,32 +121,3 @@
 (defun enable-abackquote (&optional (disp-char #\#) (sub-char #\`))
   (set-dispatch-macro-character disp-char sub-char #'|#`-reader|))
 
-(read-from-string "#`(print (list ,a0 ,a1 ,a3))")
-(read-from-string "#`(print (list ,a0 ,a0 ,a3))")
-(read-from-string "#4`(print (list ,a0 a1 a3))")
-(read-from-string "#0`(print (list ,a0 a1 a3))")
-(read-from-string "#`(print (list ,a0 a1 a3))")
-(read-from-string "#`(print (list ,a0 ,a1 ,(progn `(foo ,a0) `(bar ,a2))))")
-(read-from-string "#`(print (list ,a0 ,a1 ,(progn `(foo ,a0) `(bar ,a1))))")
-(read-from-string "#`(print (list ,a0 ,a1 ,(progn #`(foo ,a4) `(bar ,a2))))")
-(read-from-string "#`(print (list ,a0 ,a1 ,(progn #`(foo ,a!4) #`(bar ,a2))))")
-(read-from-string "#`(print (list ,abc ,a1 ,a3))")
-(let ((*read-base* 4))
-  (read-from-string "#`(print (list ,a10 (bc ,a2) ,a1 ,a0 a4))"))
-(read-from-string "#`(print (list ,a2bc ,a1 ,a3))")
-(read-from-string "#`(print (list ,a\\2\\bc ,a1 ,a3))")
-(read-from-string "#`(print (list ,a\\2bc ,a1 ,a3))")
-
-(read-from-string "#`(list ,a0)")
-(read-from-string "#`(list ,A0)")
-(read-from-string "#`(list ,a1 ,a0)")
-(read-from-string "#`(list ,a\\1 ,a0)")
-(read-from-string "#`(list ,A\\1 ,a0)")
-(read-from-string "#`(list ,a1\\1 ,a0)")
-
-(read-from-string "#`(print (list ,a0 ,a1 ,(progn #`(foo ,a!4 #`(baz a!1)) #`(bar ,a2))))")
-(read-from-string "#`(print (list ,a0 ,a1 ,(progn #`(foo ,a!4 #`(baz a!!1)) #`(bar ,a2))))")
-(read-from-string "#`(print (list ,a0 ,a1 ,(progn #`(foo ,a!4 #`(baz a!!5)) #`(bar ,a2))))")
-
-(read-from-string "#`(list ,a0 a!d)")
-(read-from-string "#`(list ,a01 a!02)")
