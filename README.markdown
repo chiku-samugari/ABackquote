@@ -8,8 +8,8 @@ the form and will be parameters of the lambda form.
 
     [aA][!]*0 | [aA][!]*[1-9][0-9]*
 
-Before dig into the detail of ABackquote, let me list the examples. It
-is assumed that ABackquote is set to _#`_. This assumption is used
+Before dig into the detail of ABackquote, let me list some examples. It
+is assumed that ABackquote is set to `#``. This assumption is used
 throughout this document.
 
     ; simplest use case
@@ -39,7 +39,7 @@ throughout this document.
 enable-abackquote makes disp-char followed by sub-char to be a
 ABackquote reader macro.
 
-## Detail of ABackquote
+## ABackquote detail
 
 ABackquote is an extension of Sharp-Backquote reader macro, which is
 introduced in the first edition of Doug Hoyte's _Let Over the Lambda_
@@ -141,7 +141,7 @@ characters because I could not find out a standard method that tells if
 a macro charcter is a terminating macro character or non-terminating
 macro character.
 
-For example, let #\? be a non-terminating macro character which returns
+For example, let `#\?` be a non-terminating macro character which returns
 no values. We will get following result.
 
     (set-macro-character #\? (lambda (strm c) (values)) t) ;=> T
@@ -170,14 +170,14 @@ violates the syntax of anaphora and it will not be considered as an
 anophor even if it appears within an ABackquote form.
 
 The situation will be complicated a bit if both of `a0` and `a\0`
-appears in a ABackquote form. The resulting lambda form will include an
+appears in an ABackquote form. The resulting lambda form will include an
 anphor whose name is `A0` because `a0` appears, and the result of INTERN
 for the token `a\1` also refers that parameter.
 
     #`(list ,a0 ,a\0) => (LAMBDA (A0) `(LIST ,A0 ,A0))
 
 Similar discussion stands for the package marker, too. These seem to
-beconfusing and might be changed.
+be confusing and might be changed.
 
 Another component of READ that could affect to the behaviour of
 ABackquote is `*READ-BASE*`. It is ignored. Even if the `*READ-BASE` is
@@ -202,10 +202,10 @@ myself.
 
 The idea, the number of exclamation marks decides the level of
 ABackquote which introduces the parameter, is taken from the behaviour
-of comma in the original backquote reader macro of Common Lisp. Although
-the effect of this exclamation mark is far more easier to predict, we
-have already experienced a lot of confusion when we abuse this kind of
-syntax sugars.
+of commas in the backquote reader macro of Common Lisp. Although the
+effect of this exclamation mark is far more easier to predict, we have
+already experienced a lot of confusion when we abuse this kind of syntax
+sugars.
 
 ## Known issues
 
@@ -216,7 +216,7 @@ Not working at all for now.
 ## Too many exclamation marks
 
 Likewise commas in a backquote form, too many exclamation marks should
-be handled by ABackquote.
+be handled by ABackquote. It is not handled for now.
 
 ## miscellaneous
 
@@ -228,3 +228,9 @@ of ANSI Common Lisp. I think the parameter is the receiver of arguments.
 Integer infix *parameter* will receive integer infix *argument*.
 Therefore, a number written between sharp and backquote
 should be called *argument*, I think.
+
+## Author and License
+
+Author : chiku (Takehiko Nawata, samugari.penguin@gmail.com)
+
+License : MIT License
