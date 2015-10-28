@@ -43,7 +43,7 @@ ABackquote reader macro.
 
 ABackquote is an extension of Sharp-Backquote reader macro, which is
 introduced in the first edition of Doug Hoyte's _Let Over the Lambda_
-section 4. As the truth, under the same use cases, Hoyte's
+section 5. As the truth, under the same use cases, Hoyte's
 Sharp-Backquote and ABackquote behaves in an identical manner, except
 the starting value of suffix; the suffix of anaphora in
 ABackquote starts from 0, while that starts from 1 in Sharp-Backquote.
