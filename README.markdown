@@ -172,7 +172,7 @@ anophor even if it appears within an ABackquote form.
 The situation will be complicated a bit if both of `a0` and `a\0`
 appears in an ABackquote form. The resulting lambda form will include an
 anphor whose name is `A0` because `a0` appears, and the result of INTERN
-for the token `a\1` also refers that parameter.
+for the token `a\0` also refers that parameter.
 
     #`(list ,a0 ,a\0) => (LAMBDA (A0) `(LIST ,A0 ,A0))
 
