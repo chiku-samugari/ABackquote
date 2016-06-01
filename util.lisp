@@ -14,7 +14,7 @@
      ,@body))
 
 (defun concat-str (&rest strs)
-    (apply #'concatenate (cons 'string strs)))
+    (apply #'concatenate 'string strs))
 
 (defmacro awhile (form &body body)
   `(do ((it ,form ,form))
