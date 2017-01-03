@@ -3,11 +3,6 @@
 ;;;
 ;;; Author: chiku (Takehiko Nawata, samugari.penguin@gmail.com)
 ;;; License: MIT License
-(defpackage :abackquote.asd
-  (:use :cl :asdf))
-
-(in-package :abackquote.asd)
-
 (defsystem abackquote
   :name "ABackquote"
   :version "0.8.0"
