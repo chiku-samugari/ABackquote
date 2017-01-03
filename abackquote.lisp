@@ -38,7 +38,7 @@
   (make-concatenated-stream
     (make-string-input-stream
       (reduce (lambda (part item)
-                (concat-str part (string item)))
+                (concat part (string item)))
               strdesg-lst :initial-value ""))
     strm))
 

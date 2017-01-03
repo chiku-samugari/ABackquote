@@ -13,7 +13,7 @@
               `(,(car name) (gensym (or ,(cadr name) "G"))))))
      ,@body))
 
-(defun concat-str (&rest strs)
+(defun concat (&rest strs)
     (apply #'concatenate 'string strs))
 
 (defmacro awhile (form &body body)
